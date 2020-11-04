@@ -5,16 +5,11 @@ from google.protobuf import json_format
 
 async def main():
     redis = await aioredis.create_redis_pool('redis://localhost')
-    channel, = await redis.subscribe('testing')
-    assert isinstance(channel, aioredis.Channel)
-    
-    async def reader(channel):
-        async for message in channel.iter():
-            feature = json_format.Parse(message, Feature())
-            print("Got message:", feature.point.latitude)
-    task = asyncio.get_running_loop().create_task(reader(channel))
-    await task
-    # redis.close()
-    # await redis.wait_closed()
+    while True:
+        channel, text_message = await redis.blpop('testing')
+        reply_channel = text_message[0:36].decode('utf-8')
+        feature = json_format.Parse(text_message[36:], Feature())
+        print(reply_channel)
+        await redis.publish(reply_channel, 'Hello World')
 
 asyncio.run(main())
